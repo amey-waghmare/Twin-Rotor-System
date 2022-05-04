@@ -38,4 +38,4 @@ pi = pigpio.pi()
 max_value = 1700
 min_value = 1199
 
-hover_pwm = 1355
+hover_pwm = 1510

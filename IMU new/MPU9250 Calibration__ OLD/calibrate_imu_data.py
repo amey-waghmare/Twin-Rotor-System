@@ -7,6 +7,7 @@ time.sleep(1)
 
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 import sys
 
@@ -44,6 +45,7 @@ mag_data = np.array(mag_data)
 fig = plt.figure()
 ax = plt.axes(projection = "3d")
 ax.scatter3D(mag_data[:,0], mag_data[:,1], mag_data[:,2])
+ax.scatter3D(0,0,0, marker = "^")
 ax.set_xlabel("Mx")
 ax.set_ylabel("My")
 ax.set_zlabel("Mz")
@@ -98,6 +100,7 @@ ax.set_xlabel("Mx")
 ax.set_ylabel("My")
 ax.set_zlabel("Mz")
 ax.set_title("Magnetometer Readings after Calibration")
+ax.scatter3D(0,0,0, marker = "^")
 plt.show()
 
 print("The finally calibrated values are MagScale {}, Mbias{} ".format(mpu.magScale, mpu.mbias))

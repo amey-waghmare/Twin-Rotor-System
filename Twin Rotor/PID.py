@@ -17,6 +17,7 @@ class PID:
 
 
     def Compute(self, feedback, target, dt):
+        
         error = self.Error(feedback, target)
 
         p_error = error
@@ -54,9 +55,16 @@ class YAW_PID(PID):
         # target and input are in the 0 - 2 pi range.  This is asserted. Results are in the +/- pi
         # range to make sure we spin the shorted way.
         #-------------------------------------------------------------------------------------------
-        assert (abs(feedback) <= math.pi), "yaw input out of range %f" % math.degrees(feedback)
-        assert (abs(target) <= math.pi), "yaw target out of range %f" % math.degrees(target)
+        target = math.radians(target)
+        feedback = math.radians(feedback)
+        #assert (abs(feedback) <= math.pi), "yaw input out of range %f" % math.degrees(feedback)
+        #assert (abs(target) <= math.pi), "yaw target out of range %f" % math.degrees(target)
         error = ((target - feedback) + math.pi) % (2 * math.pi) - math.pi
+        
+        error = math.degrees(error)
+        target = math.degrees(target)
+        feedback = math.degrees(feedback)
+        
         return error
 
 

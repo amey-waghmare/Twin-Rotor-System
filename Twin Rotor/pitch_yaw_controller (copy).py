@@ -73,16 +73,16 @@ mpu.mbias = [-5.534855769230769, 37.99165998931623, -46.97159741300366]
 mpu.configure()
 
 print("Abias {} Gbias {}, MagScale {}, Mbias{} ".format(mpu.abias, mpu.gbias, mpu.magScale, mpu.mbias))
-epochs = 4000
+epochs = 8000
 Q = np.tile([1.0, 0.0,0.0,0.0], (epochs,1))
 eul = []
 
 pwm_to_give = hover_pwm
 esc1.set(pwm_to_give)
-goal_pitch = 13
+goal_pitch = 20
 
-PID_PI_P_GAIN = 0.9
-PID_PI_I_GAIN = 0.6
+PID_PI_P_GAIN = 1
+PID_PI_I_GAIN = 0.7
 PID_PI_D_GAIN = 0.2
 
 pa_pid = PID(PID_PI_P_GAIN, PID_PI_I_GAIN, PID_PI_D_GAIN)

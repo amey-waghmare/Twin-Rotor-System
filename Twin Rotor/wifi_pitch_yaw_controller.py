@@ -10,6 +10,7 @@ import socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5051
+sock.setblocking(False)
 sock.bind((UDP_IP,UDP_PORT))
 ## Enter above UDP_PORT in mobile app
 time.sleep(1)
@@ -31,6 +32,7 @@ print("ESC Calibrated, Now working on IMU")
 
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 from PID import *
 
 
@@ -44,12 +46,15 @@ import time
 
 from quat2euler import quat2euler_angle
 
+from ahrs.filters import Mahony
+
 ## Mahony
-from mahony_ahrs import Mahony    ## Updated library with corrected Integrator Implementation
+#from mahony_ahrs import Mahony    ## Updated library with corrected Integrator Implementation
 from ahrs import Quaternion
 ## Without disturbance
 #orientation = Mahony(frequency = 100.0,k_P = 45, k_I = 30)
 orientation = Mahony(frequency = 100.0,k_P = 7, k_I = 5) ### Working great for steady state
+
 
 
 
@@ -62,35 +67,39 @@ mpu = MPU9250(address_ak = AK8963_ADDRESS, address_mpu_master = MPU9050_ADDRESS_
 mpu.configure()
 mpu.calibrateMPU6500()
 ### Values in Powai
-mpu.magScale = [1.0843706777316735, 0.9042675893886966, 1.0288713910761154]
-mpu.mbias = [-5.534855769230769, 37.99165998931623, -46.97159741300366]
+mpu.magScale = [0.97976, 0.98861, 1.033333]
+mpu.mbias = [-16.57176816, 42.9279313, -45.592276]
 
 ### Values in Nagpur
 #mpu.magScale = [1.381642, 0.97435897, 1.02702703]
 #mpu.mbias = [18.44951923, 13.66289396, -45.109660220]
-
+#mag_cal_data = [11.865234375, 7.5439453125, -41.162109375]
 mpu.configure()
 
 print("Abias {} Gbias {}, MagScale {}, Mbias{} ".format(mpu.abias, mpu.gbias, mpu.magScale, mpu.mbias))
-epochs = 8000
+epochs = 15000
 Q = np.tile([1.0, 0.0,0.0,0.0], (epochs,1))
 eul = []
 
-PID_PI_P_GAIN = 2
-PID_PI_I_GAIN = 0.0
-PID_PI_D_GAIN = 0.0
+pwm_to_give = hover_pwm
+esc1.set(pwm_to_give)
+goal_pitch = 0
+
+PID_PI_P_GAIN = 1
+PID_PI_I_GAIN = 0.7
+PID_PI_D_GAIN = 0.2
 
 pa_pid = PID(PID_PI_P_GAIN, PID_PI_I_GAIN, PID_PI_D_GAIN)
 
 err = []
 
 angles = []
+t = 0
 
-esc1_pwm = 1300
-esc2_pwm = 1300
-step_change = 10
-
-for t in range(1, epochs):
+### Required by socket ###
+data = b'5'
+while True:
+    
     ## Gives list
     a = mpu.readAccelerometerMaster()
     a = [item*9.80665 for item in a]
@@ -99,57 +108,46 @@ for t in range(1, epochs):
     g = [item/57.2958 for item in g]
     
     m = mpu.readMagnetometerMaster()
+    #for ele in range(3):
+    #    m[ele] = m[ele] - mag_cal_data[ele]
     #m = [item for item in m]    
-
-    ## Wifi Stuff
-    data, addr = sock.recvfrom(1024)
-    data = data.decode("utf-8")
-    if data == "device1on":
-        esc1.set(esc1_pwm)
-    elif data == "device1off":
-        esc1.set(min_value)
-    elif data == "device2on":
-        esc2.set(esc2_pwm)
-    elif data == "device2off":
-        esc2.set(min_value)
-    
-    elif data == "d1a":
-        esc1_pwm = 1700 if esc1_pwm >= 1700 else esc1_pwm + step_change
-        esc1.set(esc1_pwm)
-    elif data == "d1s":
-        esc1_pwm = 1199 if esc1_pwm <= 1199 else esc1_pwm - step_change
-        esc1.set(esc1_pwm)
-    elif data == "d2a":
-        esc2_pwm = 1700 if esc2_pwm >=1700 else esc2_pwm + step_change
-        esc2.set(esc2_pwm)
-    elif data == "d2s":
-        esc2_pwm = 1199 if esc2_pwm <= 1199 else esc2_pwm - step_change
-        esc2.set(esc2_pwm)
-    
-    
-    ##
         
-    Q[t] = orientation.updateMARG(Q[t-1], gyr = g, acc = a, mag = m)    
-    #Q[t] = orientation.updateIMU(Q[t-1], gyr = g, acc = a)        
+    #Q[t] = orientation.updateMARG(Q[t-1], gyr = g, acc = a, mag = m)    
+    Q[t] = orientation.updateIMU(Q[t-1], gyr = g, acc = a)        
     meas_pitch, meas_roll, meas_yaw = quat2euler_angle(Q[t,0], Q[t,1], Q[t,2], Q[t,3])
+
     
-        
-    p_out, i_out, d_out = pa_pid.Compute(meas_pitch, 8, dt_angles)
+    ##### Now reading the goal angle ######
+    try:
+        data = sock.recv(1024, socket.MSG_DONTWAIT)
+        print(data)
+    except BlockingIOError as e:
+        #print("passing")
+        pass
+    if not isinstance(data, str):
+        data = data.decode("utf-8")
+    goal_pitch = int(data[-2:]) - 35
+    
+    
+    p_out, i_out, d_out = pa_pid.Compute(meas_pitch, goal_pitch, dt_angles)
     error = p_out + i_out + d_out
     err.append(error)
-     
     
-    print("PWM: {}\tErr:{:.2f}\tPitch: {:.2f}\t".format(esc1_pwm, error, meas_pitch))
-    #pwm_to_give = hover_pwm + int(round(error))
-    #esc1.set(pwm_to_give)    
+    gravity_to_compensate = int(round(14*9.81*np.sin(np.radians(goal_pitch))))
+    pwm_to_give = hover_pwm + gravity_to_compensate + int(round(error))
+    esc1.set(pwm_to_give)
     #time.sleep(0.1)
     
     ## Debug
     #print("PWM: {:.2f}\t error:{:.2f} PITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}".format(pwm_to_give, error, X, Y, Z))
-    #print("PWM: {}\tERR: {}\tPITCH: {:.2f} \t ROLL: {:.2f} \t YAW: {:.2f} ".format(pwm_to_give,error, meas_pitch, meas_roll, meas_yaw))
+    print("t: {}\t PWM: {}\tERR: {:.2f}\tPITCH: {:.2f}\t YAW: {:.2f}\t Gravity:{:.2f}".format(t, pwm_to_give,error, meas_pitch, meas_yaw, gravity_to_compensate))
     angles.append([meas_pitch, meas_roll, meas_yaw])
+    t = t + 1
+    if t == epochs:
+        break
 
 angles = np.array(angles)
+np.savetxt("angles__1.csv", angles, delimiter = ",")
 
 fig, axs = plt.subplots(3)
 fig.suptitle("Euler angles")

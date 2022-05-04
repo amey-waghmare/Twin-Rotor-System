@@ -20,8 +20,9 @@ time.sleep(1)
 
 
 ## Tell here the pins where ESC are connected (These are gpio numbers and not board numbers)
-ESC1 = 27
-ESC2 = 17
+ESC1 = 17
+ESC2 = 27
+ESC3 = 22
 
 
 pi = pigpio.pi()
@@ -56,7 +57,7 @@ class ESC:
         pi.set_servo_pulsewidth(self.gpio_pin, self.pulse_width)
         
         ### This is to debug        
-        print("pulse width :{}".format(self.pulse_width))
+        print("t {}\tpulse width :{}".format(cnt,self.pulse_width))
 
     def kill_esc(self):
         pi.set_servo_pulsewidth(self.gpio_pin, 0)
@@ -65,18 +66,29 @@ class ESC:
 print("Wait 3 sec")
 esc1 = ESC(ESC1)
 esc2 = ESC(ESC2)
+esc3 = ESC(ESC3)
 time.sleep(3)
 print("ESC Calibrated, Now start commands")
 
 esc1_pwm = 1300
 esc2_pwm = 1300
+esc3_pwm = 1300
 
 step_change = 5
+
+cnt = 0
 while True:
-    data, addr = sock.recvfrom(1024)
+    cnt = cnt + 1
+    sock.settimeout(0.01)
+    try:
+        data, addr = sock.recvfrom(1024)
+    except:
+        data = None
+    if data is None:
+        continue
     ## The above data comes in bytes, need to convert it into string
     data = data.decode("utf-8")
-    print(data)
+    print(data, cnt)
 
     if data == "device1on":
         esc1.set(esc1_pwm)
@@ -86,6 +98,10 @@ while True:
         esc2.set(esc2_pwm)
     elif data == "device2off":
         esc2.set(min_value)
+    elif data == "device3on":
+        esc3.set(esc3_pwm)
+    elif data == "device3off":
+        esc3.set(min_value)
     
     elif data == "d1a":
         esc1_pwm = 1700 if esc1_pwm >= 1700 else esc1_pwm + step_change
@@ -99,10 +115,18 @@ while True:
     elif data == "d2s":
         esc2_pwm = 1199 if esc2_pwm <= 1199 else esc2_pwm - step_change
         esc2.set(esc2_pwm)
+    elif data == "d3a":
+        esc3_pwm = 1700 if esc3_pwm >=1700 else esc3_pwm + step_change
+        esc3.set(esc3_pwm)
+    elif data == "d3s":
+        esc3_pwm = 1199 if esc3_pwm <= 1199 else esc3_pwm - step_change
+        esc3.set(esc3_pwm)     
     
-    elif data == "device4off":
+    
+    elif data == "alloff":
         esc1.kill_esc()
         esc2.kill_esc()
+        esc3.kill_esc()
         pi.stop()
         break    
 
