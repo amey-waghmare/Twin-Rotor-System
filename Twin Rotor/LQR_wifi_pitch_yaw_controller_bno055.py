@@ -24,7 +24,7 @@ ESC3 = 22
 ### Initialize the ESC
 from esc import *
 
-#print("Wait 3 sec")
+print("Wait 3 sec")
 esc1 = ESC(ESC1)
 esc2 = ESC(ESC2)
 esc3 = ESC(ESC3)
@@ -86,12 +86,18 @@ t = 0
 ##########################################################################################################################################
 ######    LQR    #######
 
-A = np.array([[1, 0, 0.009985, 0],[-1.503e-6, 1, -5.012e-9, 0.009936],[-0.008234, 0, 0.997, 0],[-0.0003, 0, -1.502e-6, 0.9872]])
-B = np.array([[7.397e-9, -4.615e-11],[-2.461e-10, 1.378e-9],[1.479e-6, -9.225e-9],[-4.911e-8, 2.75e-7]])
-
+#10x45
+#A = np.array([[1, 0, 0.009985, 0],[-1.503e-6, 1, -5.012e-9, 0.009936],[-0.008234, 0, 0.997, 0],[-0.0003, 0, -1.502e-6, 0.9872]])
+#B = np.array([[7.397e-9, -4.615e-11],[-2.461e-10, 1.378e-9],[1.479e-6, -9.225e-9],[-4.911e-8, 2.75e-7]])
 ### LQR gain
-K = np.array([[0.5204e4, -1.6410e4, 0.6346e4, -1.1363e4],[-0.0371e4, 1.8694e4, 0.0028e4, 1.2574e4]])
+#K = np.array([[0.5204e4, -1.6410e4, 0.6346e4, -1.1363e4],[-0.0371e4, 1.8694e4, 0.0028e4, 1.2574e4]])
 
+#9x4.3
+
+A = np.array([[1, 0, 0.009985, 0],[-1.112e-06, 1, -3.707e-09, 0.009936],[-0.008234, 0, 0.997, 0],[-0.0002219, 0, -1.111e-06,0.9872]])
+B = np.array([[5.471e-09, -3.413e-11],[-1.82e-10, 1.019e-09],[1.094e-06, -6.823e-09],[-3.632e-08, 2.034e-07]])
+### LQR gain   
+K = np.array([[0.4371e4, -1.8020e4, 0.6363e4, -1.2831e4],[-0.0327e4, 1.8436e4, -0.0013e4, 1.2808e4]])
 
 
 #epochs = 8000
@@ -109,21 +115,20 @@ prev_gyro_z = 0
 data = b'0'
 while True:
     
-    ##### Now reading the goal angle ######
-    
+    ########## Now reading the goal angle #############
     ###################################################
-    ###### This block is only for slider in APP #######
     try:
         data = sock.recv(1024, socket.MSG_DONTWAIT)
         print(data)
+    
     except BlockingIOError as e:
+        data = "qwerty"
+        #uncomment this if using App slider
         #print("passing")
-        pass
+        #pass
     if not isinstance(data, str):
         data = data.decode("utf-8")
     ####################################################   
-    ##If not slider, uncomment above and comment below##
-    
     
     if data == "pitrada":
         goal_pitch_rad = goal_pitch_rad + 0.01 
@@ -132,11 +137,19 @@ while True:
     
     elif data == "yawrada":
         goal_yaw_rad = goal_yaw_rad + 0.01 
-    elif data == "pitradz":
+    elif data == "yawradz":
         goal_yaw_rad = goal_yaw_rad - 0.01
     
     elif data == "alloff":
         break
+    
+    
+    
+    goal_angles.append([goal_pitch_rad, goal_yaw_rad])
+    
+    
+    
+    
     
     ### Read Sensor data
     meas_yaw, meas_roll, meas_pitch = sensor.euler
@@ -168,6 +181,16 @@ while True:
         us = np.dot(np.dot(np.dot(np.linalg.inv(np.dot(B.transpose(),B)), B.transpose()), A ), xd)
         uk = us - np.dot(K, (np.array([[meas_pitch_rad],[meas_yaw_rad],[meas_gyro_x],[meas_gyro_z]]) - xd))
         
+        ## Bound input values
+        if uk[0] > 9500:
+            uk[0] =9500
+            
+        if uk[1] > 1500:
+            uk[1] = 1500
+        elif uk[1] < -500:
+            uk[1] = -500
+        
+        
         
         ### Omega to PWM
         weight_pwm = np.array([1.26640802e3, -2.30569152e-2, 3.30102447e-5])
@@ -192,21 +215,6 @@ while True:
         esc2.set(pwm_t_L)
         esc3.set(pwm_t_R)
         
-        
-        
-        #print("{}\t{}".format(goal_pitch_rad, goal_yaw_rad),"\t\t\t",uk)
-        
-        #gravity_to_compensate = int(round(30*9.81*np.sin(np.radians(goal_pitch))))
-        #pitch_pwm_to_give = hover_pwm + gravity_to_compensate + int(round(pitch_error))
-        #esc1.set(pitch_pwm_to_give)
-        #time.sleep(0.1)
-        
-        
-        
-        
-        
-        #print("YAW ANGLE: {:.2f}\tYaw Error: {:.2f}\tL motor: {}\t R Motor: {}".format(meas_yaw, yaw_error, yawL_pwm_to_give,yawR_pwm_to_give))
-        
         ## for spikes
         prev_yaw = meas_yaw
         prev_pitch = meas_pitch
@@ -214,10 +222,9 @@ while True:
         prev_gyro_z = meas_gyro_z
         
         ## Debug
-        print("PITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format( meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
+        print("{}\t{}\tgola_pitch: {:.2f}\tgoal_yaw: {:.2f}\tPITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format(uk[0], uk[1],goal_pitch_rad, goal_yaw_rad ,meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
         
-        angles.append([meas_pitch, meas_roll, meas_yaw])
-        #goal_angles.append([goal_pitch, goal_roll, goal_yaw])
+        angles.append([meas_pitch_rad, meas_roll, meas_yaw_rad])
         
         gyro_data.append([meas_gyro_x, meas_gyro_z])
     
@@ -226,7 +233,7 @@ while True:
     #if t == epochs:
     #    break
 
-#angles = np.array(angles)
+angles = np.array(angles)
 goal_angles = np.array(goal_angles)
 gyro_data = np.array(gyro_data)
 
@@ -250,7 +257,7 @@ axs[0].set_ylabel("Pitch (degree)")
 axs[0].grid()
 
 axs[1].plot(angles[1000:,2])
-axs[1].plot(goal_angles[1000:,2])
+axs[1].plot(goal_angles[1000:,1])
 axs[1].legend("Yaw")
 axs[1].set_ylabel("Yaw (degree)")
 axs[1].grid()

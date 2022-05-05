@@ -10,13 +10,25 @@ sock.bind((UDP_IP,UDP_PORT))
 time.sleep(1)
 
 data = b'0'
+count = 0
+
+pitch = 0.3
 
 while True:
     try:
         data = sock.recv(1024, socket.MSG_DONTWAIT)
     except BlockingIOError as e:
-        pass
+        data = "0"
+        
     if not isinstance(data, str):
         data = data.decode("utf-8")
-
-    print(data, type(data))
+    
+    if data == "pitrada":
+        pitch = pitch + 0.01
+    elif data == "pitradz":
+        pitch = pitch - 0.01
+    
+    count = count + 1
+    
+    
+    print(count, data, pitch, type(data))
