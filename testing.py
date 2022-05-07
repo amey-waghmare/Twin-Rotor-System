@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
 # SPDX-License-Identifier: MIT
 
+import numpy as np
+
 import time
 import board
 import serial
@@ -49,6 +51,9 @@ while True:
     #print()
     yaw, roll, pitch = sensor.euler
     if yaw != None or roll != None or pitch != None:
+        pitch = np.radians(pitch)
+        roll = np.radians(roll)
+        yaw = np.radians(yaw)
         print("Pitch: {:.2f}\tRoll: {:.2f}\tYaw: {:.2f}\tCalibration: {}".format(pitch, roll, yaw, sensor.calibration_status))
         #print("Pitch: {:.2f}".format(pitch))
     #time.sleep(0.1)

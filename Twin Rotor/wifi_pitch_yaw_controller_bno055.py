@@ -73,12 +73,12 @@ goal_roll = 0
 goal_yaw = 0
 
 pitch_P_GAIN = 1.5
-pitch_I_GAIN = 1.3
+pitch_I_GAIN = 2.0
 pitch_D_GAIN = 1.2
 
-yaw_P_GAIN = 1.1
-yaw_I_GAIN = 2.1
-yaw_D_GAIN = 0.8
+yaw_P_GAIN = 0.8
+yaw_I_GAIN = 1.5
+yaw_D_GAIN = 1.5
 
 dt_angles = 0.01
 

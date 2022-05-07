@@ -80,6 +80,8 @@ angles = []
 
 gyro_data = []
 
+uk_data = []
+
 t = 0
 
 
@@ -94,13 +96,13 @@ t = 0
 
 #9x4.3
 
-
-A = np.array([[1, 0, 0.009985, 0],[-1.503e-06, 1, -5.012e-09, 0.009936],[-0.008234, 0, 0.997, 0],[-0.0003, 0, -1.502e-06, 0.9872]])
-B = np.array([[3.763e-09, -2.348e-11],[-1.252e-10, 7.011e-10],[7.523e-07, -4.694e-09],[-2.499e-08, 1.399e-07]])
+A = np.array([[1, 0, 0.009999, 0],[-1.589e-06, 1, -5.299e-09, 0.009985],[0.009145, 0, 0.9998, 0],[-0.0003177, 0, -1.589e-06, 0.997]])
+B = np.array([[1.572e-08, -9.682e-11],[-5.241e-10, 2.898e-09],[3.143e-06, -1.936e-08],[-1.048e-07, 5.793e-07]])
 ### LQR gain   
-K = np.array([[0.0467e3 , -1.5465e3 , 0.1517e3 , -1.1885e3],[-0.0411e3 , 4.1950e3, -0.1163e3, 3.1997e3]])
-
-
+K = np.array([[5791.572993376117, 0000.147245156907, 5963.487399068576, 0000.488975639483],[-0035.610234439909, 0031.621493404445, -0033.220274576770, 0102.553627921109 ]])
+ 
+ 
+  
 
 #epochs = 8000
 
@@ -184,15 +186,18 @@ while True:
         uk = us - np.dot(K, (np.array([[meas_pitch_rad],[meas_yaw_rad],[meas_gyro_x],[meas_gyro_z]]) - xd))
         
         ## Bound input values
-        if uk[0] > 6000:
-            uk[0] =6000
+        if uk[0] > 3500:
+            uk[0] =3500
+        elif uk[0] < -3500:
+            uk[0] = -3500
+        
             
-        if uk[1] > 1500:
-            uk[1] = 1500
-        elif uk[1] < -500:
-            uk[1] = -500
+        if uk[1] > 2000:
+            uk[1] = 2000
+        elif uk[1] < -2000:
+            uk[1] = -2000
         
-        
+        #uk[0] = abs(uk[0])
         
         ### Omega to PWM
         weight_pwm = np.array([1.26640802e3, -2.30569152e-2, 3.30102447e-5])
@@ -224,7 +229,9 @@ while True:
         prev_gyro_z = meas_gyro_z
         
         ## Debug
-        print("{}\t{}\tgola_pitch: {:.2f}\tgoal_yaw: {:.2f}\tPITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format(uk[0], uk[1],goal_pitch_rad, goal_yaw_rad ,meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
+        print("{}\t{}\t{}\t{}\tgola_pitch: {:.2f}\tgoal_yaw: {:.2f}\tPITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format(int(uk[0]), int(uk[1]), pwm_m, pwm_t, goal_pitch_rad, goal_yaw_rad ,meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
+        
+        uk_data.append([uk[0], uk[1]])
         
         angles.append([meas_pitch_rad, meas_roll, meas_yaw_rad])
         
@@ -238,6 +245,7 @@ while True:
 angles = np.array(angles)
 goal_angles = np.array(goal_angles)
 gyro_data = np.array(gyro_data)
+uk_data = np.array(uk_data)
 
 #np.savetxt("angles__1.csv", angles, delimiter = ",")
 
@@ -249,32 +257,43 @@ pi.stop()
 
 
 
-fig, axs = plt.subplots(4)
+fig, axs = plt.subplots(6)
 fig.suptitle("States")
 
-axs[0].plot(angles[1000:,0])
-axs[0].plot(goal_angles[1000:,0])
+axs[0].plot(angles[1:,0])
+axs[0].plot(goal_angles[1:,0])
 axs[0].legend("Pitch")
 axs[0].set_ylabel("Pitch (degree)")
 axs[0].grid()
 
-axs[1].plot(angles[1000:,2])
-axs[1].plot(goal_angles[1000:,1])
+axs[1].plot(angles[1:,2])
+axs[1].plot(goal_angles[1:,1])
 axs[1].legend("Yaw")
 axs[1].set_ylabel("Yaw (degree)")
 axs[1].grid()
 
 #axs[2].plot(angles[1000:,0])
-axs[2].plot(gyro_data[1000:,0])
+axs[2].plot(gyro_data[1:,0])
 axs[2].legend("Pitch Rate")
 axs[2].set_ylabel("Pitch Rate rad/sec")
 axs[2].grid()
 
 #axs[2].plot(angles[1000:,1])
-axs[3].plot(gyro_data[1000:,1])
+axs[3].plot(gyro_data[1:,1])
 axs[3].legend("Yaw Rate")
 axs[3].set_ylabel("Yaw Rate rad/sec")
 axs[3].grid()
+
+axs[4].plot(uk_data[1:,0])
+axs[4].legend("u1")
+axs[4].set_ylabel("U1")
+#axs[4].set_ylim([0,4000])
+axs[4].grid()
+
+axs[5].plot(uk_data[1:,1])
+axs[5].legend("u2")
+axs[5].set_ylabel("U2")
+axs[5].grid()
 
 
 plt.grid()
