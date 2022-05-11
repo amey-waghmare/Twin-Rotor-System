@@ -68,7 +68,7 @@ yawR_pwm_to_give = hover_pwm
 esc3.set(yawR_pwm_to_give)
 
 
-goal_pitch_rad = 0.3
+goal_pitch_rad = 0.35
 goal_roll_rad = 0.00
 goal_yaw_rad = 0.00
 
@@ -96,11 +96,12 @@ t = 0
 
 #9x4.3
 
-A = np.array([[1, 0, 0.009999, 0],[-1.589e-06, 1, -5.299e-09, 0.009985],[0.009145, 0, 0.9998, 0],[-0.0003177, 0, -1.589e-06, 0.997]])
-B = np.array([[1.572e-08, -9.682e-11],[-5.241e-10, 2.898e-09],[3.143e-06, -1.936e-08],[-1.048e-07, 5.793e-07]])
+   
+A = np.array([[1, 0, 0.01, 0],[-1.032e-07, 1, -3.44e-10, 0.009999],[0.0126, 0, 1, 0],[-2.064e-05, 0, -1.032e-07, 0.9997]])
+B = np.array([[6.292e-09, -3.722e-13],[-9.408e-12, 2.489e-10],[1.258e-06, -7.444e-11],[-1.881e-09, 4.978e-08]])
 ### LQR gain   
-K = np.array([[5791.572993376117, 0000.147245156907, 5963.487399068576, 0000.488975639483],[-0035.610234439909, 0031.621493404445, -0033.220274576770, 0102.553627921109 ]])
- 
+K = np.array([[1.991048898122167e4, -0.000000345763822e4, 1.772113020821166e4, -0.000013548546424e4],[-0.000119013390064e4, 0.000099999290716e4, -0.000099521388586e4, 0.003917872027825e4]])
+
  
   
 
@@ -180,10 +181,16 @@ while True:
         meas_yaw_rad = np.radians(meas_yaw)
         
         ## desired states
-        xd = np.array([[goal_pitch_rad],[goal_yaw_rad],[0],[0]])
+        xd = np.array([[goal_pitch_rad - (0.3)],[goal_yaw_rad - (0)],[0 - (0)],[0 - (0)]])
         
         us = np.dot(np.dot(np.dot(np.linalg.inv(np.dot(B.transpose(),B)), B.transpose()), A ), xd)
-        uk = us - np.dot(K, (np.array([[meas_pitch_rad],[meas_yaw_rad],[meas_gyro_x],[meas_gyro_z]]) - xd))
+        del_x = np.array([[meas_pitch_rad - (0.3)],[meas_yaw_rad - (0)],[meas_gyro_x - (0)],[meas_gyro_z - (0)]])
+        
+        
+        uk = us - np.dot(K, (del_x - xd))
+        
+        uk = uk + np.array([[2.789216555670474e+03], [1.103499533350318e+02]])
+        
         
         ## Bound input values
         if uk[0] > 3500:
@@ -205,7 +212,7 @@ while True:
         
         pwm_m = int(np.dot(np.array( [1, uk[0], np.power(uk[0], 2)] ), weight_pwm))
         pwm_t = int(np.dot(np.array( [1, uk[1], np.power(uk[1], 2)] ), weight_pwm))
-        
+        #pwm_t = 1200
         
         pwm_m = pwm_m if pwm_m >= 1000 else 1000
         pwm_m = pwm_m if pwm_m <= 1650 else 1650
@@ -293,7 +300,7 @@ axs[4].grid()
 axs[5].plot(uk_data[1:,1])
 axs[5].legend("u2")
 axs[5].set_ylabel("U2")
-axs[5].grid()
+#axs[5].grid()
 
 
 plt.grid()
