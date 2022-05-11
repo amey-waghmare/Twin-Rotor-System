@@ -96,7 +96,7 @@ t = 0
 
 #9x4.3
 
-   
+
 A = np.array([[1, 0, 0.01, 0],[-1.032e-07, 1, -3.44e-10, 0.009999],[0.0126, 0, 1, 0],[-2.064e-05, 0, -1.032e-07, 0.9997]])
 B = np.array([[6.292e-09, -3.722e-13],[-9.408e-12, 2.489e-10],[1.258e-06, -7.444e-11],[-1.881e-09, 4.978e-08]])
 ### LQR gain   
@@ -149,11 +149,9 @@ while True:
         break
     
     
-    
-    goal_angles.append([goal_pitch_rad, goal_yaw_rad])
-    
-    
-    
+    # convert goal_angle in the range of 0 to 2i
+    goal_yaw_rad = (goal_yaw_rad)%(2*np.pi)
+
     
     
     ### Read Sensor data
@@ -179,6 +177,7 @@ while True:
         ### Convert angles from degrees to radians
         meas_pitch_rad = np.radians(meas_pitch)
         meas_yaw_rad = np.radians(meas_yaw)
+        meas_yaw_rad = meas_yaw_rad%(2*np.pi)
         
         ## desired states
         xd = np.array([[goal_pitch_rad - (0.3)],[goal_yaw_rad - (0)],[0 - (0)],[0 - (0)]])
@@ -238,9 +237,11 @@ while True:
         ## Debug
         print("{}\t{}\t{}\t{}\tgola_pitch: {:.2f}\tgoal_yaw: {:.2f}\tPITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format(int(uk[0]), int(uk[1]), pwm_m, pwm_t, goal_pitch_rad, goal_yaw_rad ,meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
         
-        uk_data.append([uk[0], uk[1]])
         
-        angles.append([meas_pitch_rad, meas_roll, meas_yaw_rad])
+        uk_data.append([uk[0,0], uk[1,0]])
+        
+        angles.append([meas_pitch_rad, meas_yaw_rad])
+        goal_angles.append([goal_pitch_rad, goal_yaw_rad])
         
         gyro_data.append([meas_gyro_x, meas_gyro_z])
     
@@ -249,10 +250,18 @@ while True:
     #if t == epochs:
     #    break
 
+
 angles = np.array(angles)
 goal_angles = np.array(goal_angles)
 gyro_data = np.array(gyro_data)
 uk_data = np.array(uk_data)
+
+rmse_p = np.sqrt(np.square(angles[:,0] - goal_angles[:,0]).mean())
+rmse_y = (angles[:,0] - goal_angles[:,0] + np.pi) % (2*np.pi) - np.pi
+rmse_y = np.sqrt(np.square(rmse_y).mean())
+
+
+print("The RMSE errors are, Pitch{:.2f}\tYaw{:.2f}".format(rmse_p, rmse_y))
 
 #np.savetxt("angles__1.csv", angles, delimiter = ",")
 
@@ -260,7 +269,6 @@ esc1.kill_esc()
 esc2.kill_esc()
 esc3.kill_esc()
 pi.stop()
-
 
 
 
@@ -273,7 +281,7 @@ axs[0].legend("Pitch")
 axs[0].set_ylabel("Pitch (degree)")
 axs[0].grid()
 
-axs[1].plot(angles[1:,2])
+axs[1].plot(angles[1:,1])
 axs[1].plot(goal_angles[1:,1])
 axs[1].legend("Yaw")
 axs[1].set_ylabel("Yaw (degree)")
@@ -285,7 +293,7 @@ axs[2].legend("Pitch Rate")
 axs[2].set_ylabel("Pitch Rate rad/sec")
 axs[2].grid()
 
-#axs[2].plot(angles[1000:,1])
+#axs[3].plot(angles[1000:,1])
 axs[3].plot(gyro_data[1:,1])
 axs[3].legend("Yaw Rate")
 axs[3].set_ylabel("Yaw Rate rad/sec")
