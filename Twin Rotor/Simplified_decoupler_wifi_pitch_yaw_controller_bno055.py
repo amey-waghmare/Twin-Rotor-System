@@ -68,9 +68,9 @@ yawR_pwm_to_give = hover_pwm
 esc3.set(yawR_pwm_to_give)
 
 
-goal_pitch_rad = 0.35
+goal_pitch = -35
 goal_roll_rad = 0.00
-goal_yaw_rad = 0.00
+goal_yaw = 0
 
 dt_angles = 0.01
 
@@ -96,18 +96,14 @@ t = 0
 
 #9x4.3
 
-## good
-#A = np.array([[1, 0, 0.01, 0],[-1.032e-07, 1, -3.44e-10, 0.009999],[0.0126, 0, 1, 0],[-2.064e-05, 0, -1.032e-07, 0.9997]])
-#B = np.array([[6.292e-09, -3.722e-13],[-9.408e-12, 2.489e-10],[1.258e-06, -7.444e-11],[-1.881e-09, 4.978e-08]])
-### LQR gain   
-#K = np.array([[1.991048898122167e4, -0.000000345763822e4, 1.772113020821166e4, -0.000013548546424e4],[-0.000119013390064e4, 0.000099999290716e4, -0.000099521388586e4, 0.003917872027825e4]])
-
-A = np.array([[1, 0, 0.01, 0],[-1.032e-07, 1, -3.44e-10, 0.009999],[0.0126, 0, 1, 0],[-2.064e-05, 0, -1.032e-07, 0.9997]])
-B = np.array([[1.46e-07, -8.638e-12],[-2.392e-10, 6.329e-09],[2.92e-05, -1.728e-09],[-4.784e-08, 1.266e-06]])
-### LQR gain   
-K = np.array([[858.0015, 0.0016, 763.6521, 0.0362],[-4.8873, 14.1393, -3.8478, 312.7080]])
-
+ 
   
+                       
+A = np.array([[2, -1],[1, 0]])
+B = np.array([[0.001953, 0], [0, 0]])
+C = np.array([[0, 0], [-0.001219, -0.001219]])
+D = np.array([[1, 5.917e-5], [-0.03779, 1]])
+
 
 #epochs = 8000
 
@@ -120,6 +116,19 @@ prev_yaw = 0
 prev_gyro_x = 0
 prev_gyro_z = 0
 
+## PI Params
+Kc1 = 1
+T1 = 1
+Kc2 = 1
+T2 = 1
+
+
+## State space of decoupler PID combo params
+eta_prev = np.array([[0],[0]])
+xk_dec_prev = np.array([[0],[0]])
+
+xk = []
+yk = []
 
 data = b'0'
 while True:
@@ -139,22 +148,22 @@ while True:
         data = data.decode("utf-8")
     ####################################################   
     
-    if data == "pitrada":
-        goal_pitch_rad = goal_pitch_rad + 0.01 
-    elif data == "pitradz":
-        goal_pitch_rad = goal_pitch_rad - 0.01
+    #if data == "pitrada":
+    #    goal_pitch_rad = goal_pitch_rad + 0.01 
+    #elif data == "pitradz":
+    #    goal_pitch_rad = goal_pitch_rad - 0.01
     
-    elif data == "yawrada":
-        goal_yaw_rad = goal_yaw_rad + 0.01 
-    elif data == "yawradz":
-        goal_yaw_rad = goal_yaw_rad - 0.01
-    
-    elif data == "alloff":
+    #elif data == "yawrada":
+    #    goal_yaw_rad = goal_yaw_rad + 0.01 
+    #elif data == "yawradz":
+    #    goal_yaw_rad = goal_yaw_rad - 0.01
+    #
+    if data == "alloff":
         break
     
     
     # convert goal_angle in the range of 0 to 2i
-    goal_yaw_rad = (goal_yaw_rad)%(2*np.pi)
+    #goal_yaw_rad = (goal_yaw_rad)%(2*np.pi)
 
     
     
@@ -172,82 +181,91 @@ while True:
             meas_pitch = prev_pitch
         if meas_yaw > 365 or meas_yaw < -2:
             meas_yaw = prev_yaw
-        if meas_gyro_x > 10 or meas_gyro_x < -10:
-            meas_gyro_x = prev_gyro_x
-        if meas_gyro_z > 10 or meas_gyro_z < -10:
-            meas_gyro_z = prev_gyro_z
-            
+        
+        
+        ## State space
+        error = np.array([[goal_pitch - meas_pitch],[goal_yaw - meas_yaw]])
+        eta_next = eta_prev + dt_angles * error
+        u_pi = np.dot(np.array([[(Kc1/T1) , 0], [0, (Kc2/T2)]]), eta_prev) + np.dot(np.array([[(Kc1), 0], [0, (Kc2)]]), error)
+        
+        eta_prev = eta_next
+        
+        
+        xk_dec_next = np.dot(A, xk_dec_prev) + np.dot(B, u_pi)
+        u_dec = np.dot(C, xk_dec_prev) + np.dot(D, u_pi)
+        
+        print(u_dec)
         
         ### Convert angles from degrees to radians
-        meas_pitch_rad = np.radians(meas_pitch)
-        meas_yaw_rad = np.radians(meas_yaw)
-        meas_yaw_rad = meas_yaw_rad%(2*np.pi)
+        #meas_pitch_rad = np.radians(meas_pitch)
+        #meas_yaw_rad = np.radians(meas_yaw)
+        #meas_yaw_rad = meas_yaw_rad%(2*np.pi)
         
         ## desired states
-        xd = np.array([[goal_pitch_rad - (0.3)],[goal_yaw_rad - (0)],[0 - (0)],[0 - (0)]])
+        #xd = np.array([[goal_pitch_rad - (0.3)],[goal_yaw_rad - (0)],[0 - (0)],[0 - (0)]])
         
-        us = np.dot(np.dot(np.dot(np.linalg.inv(np.dot(B.transpose(),B)), B.transpose()), A ), xd)
-        del_x = np.array([[meas_pitch_rad - (0.3)],[meas_yaw_rad - (0)],[meas_gyro_x - (0)],[meas_gyro_z - (0)]])
+        #us = np.dot(np.dot(np.dot(np.linalg.inv(np.dot(B.transpose(),B)), B.transpose()), A ), xd)
+        #del_x = np.array([[meas_pitch_rad - (0.3)],[meas_yaw_rad - (0)],[meas_gyro_x - (0)],[meas_gyro_z - (0)]])
         
         
-        uk = us - np.dot(K, (del_x - xd))
+        #uk = us - np.dot(K, (del_x - xd))
         
-        uk = uk + np.array([[2.789216555670474e+03 + 850], [1.103499533350318e+02]])
+        #uk = uk + np.array([[2.789216555670474e+03], [1.103499533350318e+02]])
         
         
         ## Bound input values
-        if uk[0] > 3500:
-            uk[0] =3500
-        elif uk[0] < -3500:
-            uk[0] = -3500
+        #if uk[0] > 3500:
+        #    uk[0] =3500
+        #elif uk[0] < -3500:
+        #    uk[0] = -3500
         
             
-        if uk[1] > 2000:
-            uk[1] = 2000
-        elif uk[1] < -2000:
-            uk[1] = -2000
-        
+        #if uk[1] > 2000:
+        #    uk[1] = 2000
+        #elif uk[1] < -2000:
+        #    uk[1] = -2000
+       # 
         #uk[0] = abs(uk[0])
         
         ### Omega to PWM
-        weight_pwm = np.array([1.26640802e3, -2.30569152e-2, 3.30102447e-5])
+        #weight_pwm = np.array([1.26640802e3, -2.30569152e-2, 3.30102447e-5])
         
         
-        pwm_m = int(np.dot(np.array( [1, uk[0], np.power(uk[0], 2)] ), weight_pwm))
-        pwm_t = int(np.dot(np.array( [1, uk[1], np.power(uk[1], 2)] ), weight_pwm))
+        #pwm_m = int(np.dot(np.array( [1, uk[0], np.power(uk[0], 2)] ), weight_pwm))
+        #pwm_t = int(np.dot(np.array( [1, uk[1], np.power(uk[1], 2)] ), weight_pwm))
         #pwm_t = 1200
         
-        pwm_m = pwm_m if pwm_m >= 1000 else 1000
-        pwm_m = pwm_m if pwm_m <= 1650 else 1650
+        #pwm_m = pwm_m if pwm_m >= 1000 else 1000
+        #pwm_m = pwm_m if pwm_m <= 1650 else 1650
         
-        if pwm_t >= 0:
-            pwm_t_L = int(pwm_t)
-            pwm_t_R = 0
+        #if pwm_t >= 0:
+        #    pwm_t_L = int(pwm_t)
+        #    pwm_t_R = 0
             
-        elif pwm_t < 0:
-            pwm_t_L = 0
-            pwm_t_R = int(pwm_t)
+        #elif pwm_t < 0:
+        #    pwm_t_L = 0
+        #    pwm_t_R = int(pwm_t)
         
-        esc1.set(pwm_m)
-        esc2.set(pwm_t_L)
-        esc3.set(pwm_t_R)
+        #esc1.set(pwm_m)
+        #esc2.set(pwm_t_L)
+        #esc3.set(pwm_t_R)
         
         ## for spikes
-        prev_yaw = meas_yaw
-        prev_pitch = meas_pitch
-        prev_gyro_x = meas_gyro_x
-        prev_gyro_z = meas_gyro_z
+        #prev_yaw = meas_yaw
+        #prev_pitch = meas_pitch
+        #prev_gyro_x = meas_gyro_x
+        #prev_gyro_z = meas_gyro_z
         
         ## Debug
-        print("{}\t{}\t{}\t{}\tgola_pitch: {:.2f}\tgoal_yaw: {:.2f}\tPITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format(int(uk[0]), int(uk[1]), pwm_m, pwm_t, goal_pitch_rad, goal_yaw_rad ,meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
+        #print("{}\t{}\t{}\t{}\tgola_pitch: {:.2f}\tgoal_yaw: {:.2f}\tPITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\tP_Rate: {:.2f}\tY_Rate:{:.2f}".format(int(uk[0]), int(uk[1]), pwm_m, pwm_t, goal_pitch_rad, goal_yaw_rad ,meas_pitch, meas_roll, meas_yaw, meas_gyro_x ,meas_gyro_z))
         
         
-        uk_data.append([uk[0,0], uk[1,0]])
+        #uk_data.append([uk[0,0], uk[1,0]])
         
-        angles.append([meas_pitch_rad, meas_yaw_rad])
-        goal_angles.append([goal_pitch_rad, goal_yaw_rad])
+        #angles.append([meas_pitch_rad, meas_yaw_rad])
+        #goal_angles.append([goal_pitch_rad, goal_yaw_rad])
         
-        gyro_data.append([meas_gyro_x, meas_gyro_z])
+        #gyro_data.append([meas_gyro_x, meas_gyro_z])
     
     ### Break after certain  epochs
     #t = t + 1
@@ -261,7 +279,7 @@ gyro_data = np.array(gyro_data)
 uk_data = np.array(uk_data)
 
 rmse_p = np.sqrt(np.square(angles[:,0] - goal_angles[:,0]).mean())
-rmse_y = (angles[:,1] - goal_angles[:,1] + np.pi) % (2*np.pi) - np.pi
+rmse_y = (angles[:,0] - goal_angles[:,0] + np.pi) % (2*np.pi) - np.pi
 rmse_y = np.sqrt(np.square(rmse_y).mean())
 
 
@@ -282,13 +300,13 @@ fig.suptitle("States")
 axs[0].plot(angles[1:,0])
 axs[0].plot(goal_angles[1:,0])
 axs[0].legend("Pitch")
-axs[0].set_ylabel("Pitch (radians)")
+axs[0].set_ylabel("Pitch (degree)")
 axs[0].grid()
 
 axs[1].plot(angles[1:,1])
 axs[1].plot(goal_angles[1:,1])
 axs[1].legend("Yaw")
-axs[1].set_ylabel("Yaw (radians)")
+axs[1].set_ylabel("Yaw (degree)")
 axs[1].grid()
 
 #axs[2].plot(angles[1000:,0])
@@ -314,10 +332,10 @@ axs[5].legend("u2")
 axs[5].set_ylabel("U2")
 #axs[5].grid()
 
-fig.set_size_inches(12, 10)
+
 plt.grid()
 plt.legend()
-plt.savefig("latest_results.png", dpi = 100)
+plt.savefig("latest_results.png")
 plt.show()
 
 
