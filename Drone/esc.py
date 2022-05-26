@@ -7,12 +7,12 @@ class ESC:
         # In other words, ARM
         #-------------------------------------------------------------------------------------------
         self.pulse_width = 0
-        pi.set_servo_pulsewidth(self.gpio_pin, 0)
-        time.sleep(0.5)
-        pi.set_servo_pulsewidth(self.gpio_pin, max_value)
-        time.sleep(0.5)        
+        #pi.set_servo_pulsewidth(self.gpio_pin, 1000)
+        #time.sleep(1)
+        #pi.set_servo_pulsewidth(self.gpio_pin, 1050)
+        #time.sleep(1)        
         pi.set_servo_pulsewidth(self.gpio_pin, min_value)
-        time.sleep(0.5)
+        time.sleep(1)
 
     def set(self, pulse_width):
         pulse_width = pulse_width if pulse_width >= min_value else min_value
@@ -23,7 +23,7 @@ class ESC:
         pi.set_servo_pulsewidth(self.gpio_pin, self.pulse_width)
         
         ### This is to debug        
-        #print("pulse width :{}".format(self.pulse_width))
+        #print("t {}\tpulse width :{}".format(cnt,self.pulse_width))
 
     def kill_esc(self):
         pi.set_servo_pulsewidth(self.gpio_pin, 0)
@@ -35,7 +35,7 @@ import pigpio
 pi = pigpio.pi()
 #pi.set_servo_pulsewidth(ESC1, 0)
 
-max_value = 1700
-min_value = 1199
+max_value = 2000
+min_value = 1000
 
-hover_pwm = 1510
+hover_pwm = 1400

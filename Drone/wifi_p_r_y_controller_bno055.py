@@ -17,17 +17,20 @@ time.sleep(1)
 
 
 ## Tell here the pins where ESC are connected (These are gpio numbers and not board numbers)
-ESC1 = 17
-ESC2 = 27
-ESC3 = 22
+ESC_F = 17
+ESC_B = 27
+ESC_R = 22
+ESC_L = 23
+
 
 ### Initialize the ESC
 from esc import *
 
 print("Wait 3 sec")
-esc1 = ESC(ESC1)
-esc2 = ESC(ESC2)
-esc3 = ESC(ESC3)
+escF = ESC(ESC_F)
+escB = ESC(ESC_B)
+escR = ESC(ESC_R)
+escL = ESC(ESC_L)
 time.sleep(3)
 
 
@@ -58,31 +61,34 @@ from PID import *
 
 import sys
 
-pitch_pwm_to_give = hover_pwm
-esc1.set(pitch_pwm_to_give)
 
-yawL_pwm_to_give = hover_pwm
-esc2.set(yawL_pwm_to_give)
+escF_pwm = 1000
+escB_pwm = 1000
+escR_pwm = 1000
+escL_pwm = 1000
 
-yawR_pwm_to_give = hover_pwm
-esc3.set(yawR_pwm_to_give)
+
+escF.set(escF_pwm)
+escB.set(escB_pwm)
+escR.set(escR_pwm)
+escL.set(escL_pwm)
 
 
 goal_pitch = 0
 goal_roll = 0
 goal_yaw = 0
 
-pitch_P_GAIN = 1.5
-pitch_I_GAIN = 2.0
-pitch_D_GAIN = 1.2
+pitch_P_GAIN = 7
+pitch_I_GAIN = 5.0
+pitch_D_GAIN = 0
 
-roll_P_GAIN = 0.5
-roll_I_GAIN = 0.0
-roll_D_GAIN = 0.0
+roll_P_GAIN = 7
+roll_I_GAIN = 5.0
+roll_D_GAIN = 0
 
-yaw_P_GAIN = 0.8
-yaw_I_GAIN = 2.0
-yaw_D_GAIN = 1.2
+yaw_P_GAIN = 6
+yaw_I_GAIN = 3
+yaw_D_GAIN = 0
 
 dt_angles = 0.01
 
@@ -154,17 +160,25 @@ while True:
         pitch_error = pitch_p_out + pitch_i_out + pitch_d_out
         
     
-        gravity_to_compensate = int(round(30*9.81*np.sin(np.radians(goal_pitch))))
-        pitch_pwm_to_give = hover_pwm + gravity_to_compensate + int(round(pitch_error))
+        #gravity_to_compensate = int(round(30*9.81*np.sin(np.radians(goal_pitch))))
+        #pitch_pwm_to_give = hover_pwm + gravity_to_compensate + int(round(pitch_error))
         
-##TODO        ## Set pitch motors here
+        ## Set pitch motors here
+        pitch_pwm_to_give = int(pitch_error)
+        escF.set(1400 + pitch_pwm_to_give)
+        escB.set(1400 - pitch_pwm_to_give)
         #esc1.set(pitch_pwm_to_give)
-        #time.sleep(0.1)
+        time.sleep(0.1)
         
         ## Roll PID
         roll_p_out, roll_i_out, roll_d_out = roll_pid.Compute(meas_roll, goal_roll, dt_angles)
         roll_error = roll_p_out + roll_i_out + roll_d_out
-##TODO        ## Set yaw motors here
+        ## Set roll motors here
+        roll_error = int(roll_error)
+        escR.set(1400 - roll_error)
+        escL.set(1400 + roll_error)
+        time.sleep(0.1)
+        
         
         
         
@@ -172,19 +186,18 @@ while True:
         #yaw_error = yaw_pid.Error(meas_yaw, goal_yaw)
         yaw_p_out, yaw_i_out, yaw_d_out = yaw_pid.Compute(meas_yaw, goal_yaw, dt_angles)
         yaw_error = yaw_p_out + yaw_i_out + yaw_d_out
+        #Set yaw motors here
+        yaw_error = int(yaw_error)
+        escF.set(1400 + yaw_error)
+        escB.set(1400 + yaw_error)
+        escR.set(1400 - yaw_error)
+        escL.set(1400 - yaw_error)
+        time.sleep(0.1)
         
         
-        
-        if yaw_error >= 0:
-            yawL_pwm_to_give = 1260 + int(yaw_error)
-            yawR_pwm_to_give = 0
             
-        elif goal_yaw - meas_yaw < 0:
-            yawR_pwm_to_give = 1270 + abs(int(yaw_error))
-            yawL_pwm_to_give = 0
-            
-        esc2.set(yawL_pwm_to_give)
-        esc3.set(yawR_pwm_to_give)
+        #esc2.set(yawL_pwm_to_give)
+        #esc3.set(yawR_pwm_to_give)
         
         
         #print("YAW ANGLE: {:.2f}\tYaw Error: {:.2f}\tL motor: {}\t R Motor: {}".format(meas_yaw, yaw_error, yawL_pwm_to_give,yawR_pwm_to_give))
@@ -195,7 +208,8 @@ while True:
         
         
         ## Debug
-        print("PITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}".format( meas_pitch, meas_roll, meas_yaw))
+        print("PITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\t PWM_F: {}\t PWM_R: {}\t PWM_Y: {}".format( meas_pitch, meas_roll, meas_yaw, pitch_pwm_to_give, roll_error, yaw_error)) 
+        #print("PITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}".format( meas_pitch, meas_roll, meas_yaw))
         #print("PITCH_ERR: {:.2f}\tGOAL_PITCH {:.2f}\tPITCH: {:.2f}\t GOAL_YAW {:.2f}\tYAW: {:.2f}\t Gravity:{:.2f}".format(pitch_error, goal_pitch, meas_pitch, goal_yaw, meas_yaw, gravity_to_compensate))
         #print("YAW: {:.2f}\tGOAL_YAW: {:.2f}\tL PWM: {}\tR PWM: {}\t".format(meas_yaw, goal_yaw, yawL_pwm_to_give, yawR_pwm_to_give))
         angles.append([meas_pitch, meas_roll, meas_yaw])
@@ -205,36 +219,37 @@ while True:
 
 angles = np.array(angles)
 goal_angles = np.array(goal_angles)
-np.savetxt("angles__1.csv", angles, delimiter = ",")
+#np.savetxt("angles__1.csv", angles, delimiter = ",")
 
-esc1.kill_esc()
-esc2.kill_esc()
-esc3.kill_esc()
+escF.kill_esc()
+escB.kill_esc()
+escR.kill_esc()
+escL.kill_esc()
 pi.stop()
 
 ## Calculating RMSE
 
-rmse_p = np.sqrt(np.square(angles[:,0] - goal_angles[:,0]).mean())
-rmse_r = np.sqrt(np.square(angles[:,1] - goal_angles[:,1]).mean())
-rmse_y = (angles[:,2] - goal_angles[:,2] + 180) % (360) - 180
-rmse_y = np.sqrt(np.square(rmse_y).mean())
+#rmse_p = np.sqrt(np.square(angles[:,0] - goal_angles[:,0]).mean())
+#rmse_r = np.sqrt(np.square(angles[:,1] - goal_angles[:,1]).mean())
+#rmse_y = (angles[:,2] - goal_angles[:,2] + 180) % (360) - 180
+#rmse_y = np.sqrt(np.square(rmse_y).mean())
 
-print("RMSE P {}\t RMSE R {}\t RMSE Y {}".format(rmse_p,rmse_r, rmse_y))
+#print("RMSE P {}\t RMSE R {}\t RMSE Y {}".format(rmse_p,rmse_r, rmse_y))
 
 fig, axs = plt.subplots(3)
 fig.suptitle("Euler angles")
-axs[0].plot(angles[1000:,0])
-axs[0].plot(goal_angles[1000:,0])
+axs[0].plot(angles[1:,0])
+axs[0].plot(goal_angles[1:,0])
 axs[0].grid()
 axs[0].legend("Pitch")
 axs[0].set_ylabel("Pitch (degree)")
-axs[1].plot(angles[1000:,1])
-axs[1].plot(goal_angles[1000:,1])
+axs[1].plot(angles[1:,1])
+axs[1].plot(goal_angles[1:,1])
 axs[1].legend("Roll")
 axs[1].set_ylabel("Roll (degree)")
 axs[1].grid()
-axs[2].plot(angles[1000:,2])
-axs[2].plot(goal_angles[1000:,2])
+axs[2].plot(angles[1:,2])
+axs[2].plot(goal_angles[1:,2])
 axs[2].legend("Yaw")
 axs[2].set_ylabel("Yaw (degree)")
 
