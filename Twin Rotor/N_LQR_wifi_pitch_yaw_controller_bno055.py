@@ -68,7 +68,7 @@ yawR_pwm_to_give = hover_pwm
 esc3.set(yawR_pwm_to_give)
 
 
-goal_pitch_rad = 0.3
+goal_pitch_rad = -0.3
 goal_roll_rad = 0.00
 goal_yaw_rad = 0.00
 
@@ -88,22 +88,13 @@ t = 0
 ##########################################################################################################################################
 ######    LQR    #######
 
-#10x45
-#A = np.array([[1, 0, 0.009985, 0],[-1.503e-6, 1, -5.012e-9, 0.009936],[-0.008234, 0, 0.997, 0],[-0.0003, 0, -1.502e-6, 0.9872]])
-#B = np.array([[7.397e-9, -4.615e-11],[-2.461e-10, 1.378e-9],[1.479e-6, -9.225e-9],[-4.911e-8, 2.75e-7]])
-### LQR gain
-#K = np.array([[0.5204e4, -1.6410e4, 0.6346e4, -1.1363e4],[-0.0371e4, 1.8694e4, 0.0028e4, 1.2574e4]])
-
-#9x4.3
-
-
-A = np.array([[1, 0, 0.01, 0],[-1.032e-07, 1, -3.44e-10, 0.009999],[0.0126, 0, 1, 0],[-2.064e-05, 0, -1.032e-07, 0.9997]])
-B = np.array([[1.222e-07, -7.227e-12],[-2.001e-10, 5.295e-09],[2.443e-05, -1.445e-09],[-4.002e-08, 1.059e-06 ]])
+A = np.array([[0.9999, 0, 0.01, 0],[1.032e-07, 1, 3.44e-10, 0.009999],[-0.0126, 0, 0.9999, 0],[2.064e-05, 0, 1.032e-07, 0.9997]])
+B = np.array([[6.292e-09, -3.722e-13],[-9.407e-12, 2.489e-10],[1.258e-06, -7.444e-11],[-1.881e-09, 4.978e-08]])
 ### LQR gain   
-K = np.array([[9.690437667640357e3, 0.000000058627739e3, 2.813046188554704e3, 0.000002287383244e3],[-0.097476936202269e3, 0.000099999188942e3, -0.028288678870067e3, 0.003901211945420e3]])
-  
- 
-  
+K = np.array([[8.812038370654358e4, 0.000000040516353e4, 3.745538337440874e4, 0.000001587474369e4],[-0.000521041393067e4, 0.000099999893973e4, -0.000215662366002e4, 0.003917895756068e4]])
+
+
+
 #epochs = 8000
 
 ### Required by socket ###
@@ -179,16 +170,17 @@ while True:
         meas_yaw_rad = meas_yaw_rad%(2*np.pi)
         
         ## desired states
-        xd = np.array([[goal_pitch_rad - (0.3)],[goal_yaw_rad - (0)],[0 - (0)],[0 - (0)]])
+        xd = np.array([[goal_pitch_rad - (-0.3)],[goal_yaw_rad - (0)],[0 - (0)],[0 - (0)]])
         
         us = np.dot(np.dot(np.dot(np.linalg.inv(np.dot(B.transpose(),B)), B.transpose()), A ), xd)
-        del_x = np.array([[meas_pitch_rad - (0.3)],[meas_yaw_rad - (0)],[meas_gyro_x - (0)],[meas_gyro_z - (0)]])
+        del_x = np.array([[meas_pitch_rad - (-0.3)],[meas_yaw_rad - (0)],[meas_gyro_x - (0)],[meas_gyro_z - (0)]])
         
         
         uk = us - np.dot(K, (del_x - xd))
         
-        uk = uk + np.array([[3.3337514e3], [1.318934e+02]])
-        
+        uk = uk + np.array([[2.789216555670474e+03], [1.103499533350318e+02]])
+
+
         
         ## Bound input values
         if uk[0] > 3500:
@@ -208,7 +200,7 @@ while True:
         weight_pwm = np.array([1.26640802e3, -2.30569152e-2, 3.30102447e-5])
         
         
-        pwm_m = int(np.dot(np.array( [1, uk[0], np.power(uk[0], 2)] ), weight_pwm)) + int(round(10*9.81*np.sin((goal_pitch_rad))))
+        pwm_m = int(np.dot(np.array( [1, uk[0], np.power(uk[0], 2)] ), weight_pwm))
         pwm_t = int(np.dot(np.array( [1, uk[1], np.power(uk[1], 2)] ), weight_pwm))
         #pwm_t = 1200
         
@@ -312,7 +304,7 @@ axs[5].set_ylabel("U2")
 
 plt.grid()
 plt.legend()
-plt.savefig("latest_results.png", dpi = 100)
+plt.savefig("latest_results_NLQR.png", dpi = 100)
 plt.show()
 
 

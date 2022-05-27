@@ -10,7 +10,7 @@ class PID:
         
 
         self.i_error = 0.0
-        self.windup_guard = 15.0
+        self.windup_guard = 16.0
 
     def Error(self, feedback, target):
         return (target - feedback)
