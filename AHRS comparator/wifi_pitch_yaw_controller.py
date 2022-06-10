@@ -34,7 +34,7 @@ sensor = adafruit_bno055.BNO055_I2C(i2c)
 
 
 
-epochs = 15000
+epochs = 2000
 Q = np.tile([1.0, 0.0,0.0,0.0], (epochs,1))
 eul = []
 
@@ -58,12 +58,14 @@ while True:
         Q[t] = orientation.updateIMU(Q[t-1], gyr = g, acc = a)        
         meas_pitch, meas_roll, meas_yaw = quat2euler_angle(Q[t,0], Q[t,1], Q[t,2], Q[t,3])
         
-        print("Pitch_BNO: {:.2f}\t Manhony: {:.2f}\tRoll_BNO: {:.2f}\t Manhony: {:.2f}\tYaw_BNO: {:.2f}\t Manhony: {:.2f}\t".format(pitch_bno, meas_pitch, roll_bno, meas_roll, yaw_bno, meas_yaw))
+        print(a, g, m)
+        #print("Pitch_BNO: {:.2f}\t Manhony: {:.2f}\tRoll_BNO: {:.2f}\t Manhony: {:.2f}\tYaw_BNO: {:.2f}\t Manhony: {:.2f}\t".format(pitch_bno, meas_pitch, roll_bno, meas_roll, yaw_bno, meas_yaw))
     t = t + 1
     if t == epochs:
         break
 
 angles = np.array(angles)
+print(angles)
 np.savetxt("comparision.csv", angles, delimiter = ",")
 
 fig, axs = plt.subplots(3)

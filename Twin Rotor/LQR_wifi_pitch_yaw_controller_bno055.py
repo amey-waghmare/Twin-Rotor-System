@@ -68,7 +68,7 @@ yawR_pwm_to_give = hover_pwm
 esc3.set(yawR_pwm_to_give)
 
 
-goal_pitch_rad = 0.3
+goal_pitch_rad = 0.45
 goal_roll_rad = 0.00
 goal_yaw_rad = 0.00
 
@@ -268,45 +268,52 @@ pi.stop()
 
 
 
-fig, axs = plt.subplots(6)
+fig, axs = plt.subplots(4)
 fig.suptitle("States")
 
-axs[0].plot(angles[1:,0])
-axs[0].plot(goal_angles[1:,0])
-axs[0].legend("Pitch")
+axs[0].plot(angles[1:,0], label = "$\\theta$")
+axs[0].plot(goal_angles[1:,0], label = "$\\theta_{ref}$")
+axs[0].legend()
 axs[0].set_ylabel("Pitch (radians)")
 axs[0].grid()
 
-axs[1].plot(angles[1:,1])
-axs[1].plot(goal_angles[1:,1])
-axs[1].legend("Yaw")
+axs[1].plot(angles[1:,1], label = "$\psi$")
+axs[1].plot(goal_angles[1:,1], label = "$\psi_{ref}$")
+axs[1].legend()
 axs[1].set_ylabel("Yaw (radians)")
 axs[1].grid()
 
 #axs[2].plot(angles[1000:,0])
-axs[2].plot(gyro_data[1:,0])
-axs[2].legend("Pitch Rate")
+axs[2].plot(gyro_data[1:,0], label = "$\dot{\\theta}$")
+axs[2].legend()
 axs[2].set_ylabel("Pitch Rate rad/sec")
 axs[2].grid()
 
 #axs[3].plot(angles[1000:,1])
-axs[3].plot(gyro_data[1:,1])
-axs[3].legend("Yaw Rate")
+axs[3].plot(gyro_data[1:,1], label = "$\dot{\psi}$")
+axs[3].legend()
 axs[3].set_ylabel("Yaw Rate rad/sec")
-axs[3].grid()
-
-axs[4].plot(uk_data[1:,0])
-axs[4].legend("u1")
-axs[4].set_ylabel("U1")
-#axs[4].set_ylim([0,4000])
-axs[4].grid()
-
-axs[5].plot(uk_data[1:,1])
-axs[5].legend("u2")
-axs[5].set_ylabel("U2")
-#axs[5].grid()
-
+axs[3].set_xlabel("Sampling Instant")
+#axs[3].grid()
 fig.set_size_inches(12, 10)
+plt.grid()
+
+fig2, axs2 = plt.subplots(2)
+fig.suptitle("Inputs")
+
+axs2[0].plot(uk_data[1:,0], label = "$u_{m}$")
+axs2[0].legend()
+axs2[0].set_ylabel("PWM main rotor ($\mu s$)")
+#axs[0].set_ylim([0,4000])
+axs2[0].grid()
+
+axs2[1].plot(uk_data[1:,1], label = "$u_{t}$" )
+axs2[1].legend()
+axs2[1].set_ylabel("PWM tail rotor ($\mu s$)")
+axs2[1].set_xlabel("Sampling Instant")
+#axs[1].grid()
+fig2.set_size_inches(12, 10)
+
 plt.grid()
 plt.legend()
 plt.savefig("latest_results.png", dpi = 100)
