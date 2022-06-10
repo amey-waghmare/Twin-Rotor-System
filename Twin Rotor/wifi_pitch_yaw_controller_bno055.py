@@ -76,8 +76,8 @@ pitch_P_GAIN = 1.5
 pitch_I_GAIN = 2.0
 pitch_D_GAIN = 1.2
 
-yaw_P_GAIN = 1.5
-yaw_I_GAIN = 2.6
+yaw_P_GAIN = 1.1
+yaw_I_GAIN = 2.4
 yaw_D_GAIN = 1.2
 
 dt_angles = 0.01
@@ -165,7 +165,7 @@ while True:
             yawR_pwm_to_give = 0
             
         elif goal_yaw - meas_yaw < 0:
-            yawR_pwm_to_give = 1258 + abs(int(yaw_error))
+            yawR_pwm_to_give = 1263 + abs(int(yaw_error))
             yawL_pwm_to_give = 0
             
         esc2.set(yawL_pwm_to_give)
