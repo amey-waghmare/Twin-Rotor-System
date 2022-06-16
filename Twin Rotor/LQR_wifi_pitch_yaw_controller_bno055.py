@@ -68,7 +68,7 @@ yawR_pwm_to_give = hover_pwm
 esc3.set(yawR_pwm_to_give)
 
 
-goal_pitch_rad = 0.45
+goal_pitch_rad = 0.4
 goal_roll_rad = 0.00
 goal_yaw_rad = 0.00
 
@@ -237,7 +237,7 @@ while True:
         uk_data.append([uk[0,0], uk[1,0]])
         
         ## For plotting wrap angles
-        meas_yaw = wrap_angle_radians(meas_yaw_rad)
+        meas_yaw_rad = wrap_angle_radians(meas_yaw_rad)
         goal_yaw_rad = wrap_angle_radians(goal_yaw_rad)
         
         
