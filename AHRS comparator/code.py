@@ -16,15 +16,20 @@ import busio
 
 
 from quat2euler import quat2euler_angle
+from quat2euler import wrap_angle
+#from ahrs.filters import Mahony
 
-from ahrs.filters import Mahony
+
+## Mahony
+from mahony_ahrs import Mahony
+from ahrs import Quaternion
 
 ## Mahony
 #from mahony_ahrs import Mahony    ## Updated library with corrected Integrator Implementation
 from ahrs import Quaternion
 ## Without disturbance
 #orientation = Mahony(frequency = 100.0,k_P = 45, k_I = 30)
-orientation = Mahony(frequency = 100.0,k_P = 10, k_I = 8) ### Working great for steady state
+orientation = Mahony(frequency = 100.0,k_P = 35, k_I = 25) ### Working great for steady state
 
 
 ## BNO055
@@ -65,14 +70,21 @@ while True:
             #print (a, g, m, yaw_bno, roll_bno, pitch_bno)
         
         
-            angles_bno.append([pitch_bno, roll_bno, yaw_bno])
+            
             #Q[t] = orientation.updateMARG(Q[t-1], gyr = g, acc = a, mag = m)    
-            Q[t] = orientation.updateIMU(Q[t-1], gyr = g, acc = a)        
+            Q[t] = orientation.updateMARG(Q[t-1], gyr = g, acc = a, mag = m)        
             meas_pitch, meas_roll, meas_yaw = quat2euler_angle(Q[t,0], Q[t,1], Q[t,2], Q[t,3])
             meas_pitch = -1*meas_pitch
             meas_roll = -1*meas_roll
             meas_yaw = -1*meas_yaw
+            
+            ## Yaw angle, convert range from 0 - 360 --> -180 to 180
+            meas_yaw = wrap_angle(meas_yaw)
+            yaw_bno = wrap_angle(yaw_bno)
+            
+            
             angles_man.append([meas_pitch, meas_roll, meas_yaw])
+            angles_bno.append([pitch_bno, roll_bno, yaw_bno])
             #print(a, g, m)
             print("Pitch_BNO: {:.2f}\t Manhony: {:.2f}\tRoll_BNO: {:.2f}\t Manhony: {:.2f}\tYaw_BNO: {:.2f}\t Manhony: {:.2f}\t".format(pitch_bno, meas_pitch, roll_bno, meas_roll, yaw_bno, meas_yaw))
     prev_yaw = meas_yaw

@@ -47,7 +47,7 @@ print("calibration done!!!")
 
 ### If using Quaternions
 from quat2euler import quat2euler_angle
-
+from quat2euler import wrap_angle
 
 ### Now use sensor.euler to get values
 
@@ -177,6 +177,8 @@ while True:
         prev_yaw = meas_yaw
         prev_pitch = meas_pitch
         
+        meas_yaw = wrap_angle(meas_yaw)
+        goal_yaw = wrap_angle(goal_yaw)
         
         ## Debug
         print("PITCH: {:.2f}\t ROLL: {:.2f}\t YAW: {:.2f}\t PITCH_PWM: {}".format( meas_pitch, meas_roll, meas_yaw, pitch_pwm_to_give))
@@ -184,7 +186,7 @@ while True:
         #print("YAW: {:.2f}\tGOAL_YAW: {:.2f}\tL PWM: {}\tR PWM: {}\t".format(meas_yaw, goal_yaw, yawL_pwm_to_give, yawR_pwm_to_give))
         angles.append([meas_pitch, meas_roll, meas_yaw])
         goal_angles.append([goal_pitch, goal_roll, goal_yaw])
-        uk.append([pitch_pwm_to_give, 1266 + int(yaw_error), 1258 + abs(int(yaw_error))])
+        uk.append([pitch_pwm_to_give, 1266 + int(yaw_error), 1263 + abs(int(yaw_error))])
     
     ### Break after certain  epochs
     #t = t + 1

@@ -47,7 +47,7 @@ print("calibration done!!!")
 
 ### If using Quaternions
 from quat2euler import quat2euler_angle
-
+from quat2euler import wrap_angle_radians
 
 ### Now use sensor.euler to get values
 
@@ -235,6 +235,12 @@ while True:
         
         
         uk_data.append([uk[0,0], uk[1,0]])
+        
+        ## For plotting wrap angles
+        meas_yaw = wrap_angle_radians(meas_yaw_rad)
+        goal_yaw_rad = wrap_angle_radians(goal_yaw_rad)
+        
+        
         
         angles.append([meas_pitch_rad, meas_yaw_rad])
         goal_angles.append([goal_pitch_rad, goal_yaw_rad])

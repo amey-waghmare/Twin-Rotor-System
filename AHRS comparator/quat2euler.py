@@ -22,3 +22,10 @@ def quat2euler_angle(w, x, y, z):
     #Z = math.atan2(t3,t4)
     
     return X,Y,Z
+
+def wrap_angle(angle):
+    ## supply angle in degrees
+    if angle > 180:
+        angle -= 2.*180
+        
+    return angle
